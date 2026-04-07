@@ -26,7 +26,8 @@ Then visit: http://localhost:8000/docs for interactive API documentation
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import users
+from routers import auth, pharmacies, users
+
 
 # -----------------------------------------------------------------------------
 # CREATE THE FASTAPI APPLICATION
@@ -53,10 +54,10 @@ app.add_middleware(
     # ALLOWED ORIGINS: Which websites/apps can call this API from a browser
     # Add your ngrok URL here when testing with mobile:
     #   "https://your-ngrok-url.ngrok-free.app"
-    allow_origins=[
+    # allow_origins=[
         "http://localhost:5173",  # Vite dev server (React frontend)
-        "http://localhost:8081",  # Expo web (if you run expo start --web)
-    ],
+    #     "http://localhost:8081",  # Expo web (if you run expo start --web)
+    # ],
     allow_methods=["*"],  # Allow all HTTP methods (GET, POST, PUT, DELETE, etc.)
     allow_headers=["*"],  # Allow all headers (Content-Type, Authorization, etc.)
 )
@@ -79,3 +80,6 @@ app.add_middleware(
 #
 # PATTERN: One router per "resource" (users, products, orders, etc.)
 app.include_router(users.router, prefix="/api/users", tags=["users"])
+app.include_router(pharmacies.router , prefix="/api/pharmacies", tags=["pharmacies"])
+app.include_router(auth.router , prefix="/api/auth", tags=["auth"])
+

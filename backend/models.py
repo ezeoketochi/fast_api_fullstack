@@ -43,7 +43,10 @@ class UserCreate(BaseModel):
     name: str
     email: EmailStr  # Built-in email validation! Try sending "bad" - it fails
 
-
+class PharmacyCreate(BaseModel):
+    name: str
+    address: str
+    phone_number: str
 # -----------------------------------------------------------------------------
 # User - Used for READ operations (responses)
 # -----------------------------------------------------------------------------
@@ -59,3 +62,6 @@ class UserCreate(BaseModel):
 #   interface User { id: number; name: string; email: string; }
 class User(UserCreate):
     id: int  # Server-generated, auto-incrementing (see database.py)
+
+class Pharmacy(PharmacyCreate):
+    id: int

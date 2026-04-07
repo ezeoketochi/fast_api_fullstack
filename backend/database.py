@@ -37,8 +37,10 @@ PATTERN: In production, this would be a class like:
 #   - Keys are integers (user IDs)
 #   - Values are dictionaries (user data)
 users_db: dict[int, dict] = {}
+pharmacies_db : dict[int, dict] = {}
 
 # user_id_counter: Auto-incrementing ID generator
 # In SQL databases, this is handled by AUTO_INCREMENT or SERIAL
 # Every time we create a user, we increment this
 user_id_counter = 1
+pharmacy_id_counter = 1

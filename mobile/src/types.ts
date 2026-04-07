@@ -42,6 +42,19 @@ export interface User {
   email: string;
 }
 
+export interface Pharmacy {
+  name : string, 
+  address : string,
+  phone_number : string,
+  id: number;
+}
+
+export interface PharmacyCreate {
+  name: string;
+  address: string;
+  phone_number: string;
+}
+
 /**
  * UserCreate - Data required to create or update a user
  *

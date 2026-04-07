@@ -54,6 +54,7 @@ import * as userApi from "../src/api/users";
 // Import components — mobile versions
 import UserForm from "../src/components/UserForm";
 import UserList from "../src/components/UserList";
+import { Link } from "expo-router";
 
 /**
  * Index Component - Main Screen
@@ -273,6 +274,11 @@ export default function Index() {
           keyboardShouldPersistTaps="handled"
         >
           {/* HEADER */}
+          <Link href="/pharmacy" style={{ marginBottom: 16 }}>
+            <Text style={{ color: "#007AFF", marginBottom: 16 }}>
+              Go to Pharmacy Screen
+            </Text>
+          </Link>
           <Text style={styles.title}>User CRUD</Text>
           <Text style={styles.subtitle}>
             {editingId ? "Edit User" : "Add User"}
