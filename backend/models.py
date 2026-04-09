@@ -65,3 +65,19 @@ class User(UserCreate):
 
 class Pharmacy(PharmacyCreate):
     id: int
+
+class User(BaseModel):
+    username: str
+    email: EmailStr | None = None
+    full_name: str | None = None
+    disabled: bool | None = None
+
+class UserInDB(User):
+    hashed_password: str
+
+class TokenData(BaseModel):
+    username: str | None = None
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str

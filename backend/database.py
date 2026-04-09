@@ -39,6 +39,23 @@ PATTERN: In production, this would be a class like:
 users_db: dict[int, dict] = {}
 pharmacies_db : dict[int, dict] = {}
 
+fake_users_db = {
+    "johndoe": {
+        "username": "johndoe",
+        "full_name": "John Doe",
+        "email": "johndoe@example.com",
+        "hashed_password": "$argon2id$v=19$m=65536,t=3,p=4$V2l/SOPyl1ztNhwL4m/E0Q$3TI/nDMBOHDRsbwkK3pVQhfPkkyFosDIRse38HLpINc",
+        "disabled": False,
+    },
+    "alice": {
+        "username": "alice",
+        "full_name": "Alice Wonderson",
+        "email": "alice@example.com",
+        "hashed_password": "$argon2id$v=19$m=65536,t=3,p=4$8ms1QajIh3I2FPNXFYvOvQ$71fmg4O7WD8xc5Jg7Hhyjqux7ytwlI1TT13IoU50N6k",
+        "disabled": True,
+    },
+}
+
 # user_id_counter: Auto-incrementing ID generator
 # In SQL databases, this is handled by AUTO_INCREMENT or SERIAL
 # Every time we create a user, we increment this
