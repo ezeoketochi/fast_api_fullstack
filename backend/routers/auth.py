@@ -1,15 +1,19 @@
 from typing import Annotated
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, ValidationError
-from fastapi import APIRouter, Depends, HTTPException, status, FastAPI , Security
+from fastapi import APIRouter, Depends, HTTPException, Request, status, FastAPI , Security
 
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm, SecurityScopes
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm, SecurityScopes, HTTPBasic, HTTPBasicCredentials
 
 from models import TokenData, User, UserInDB, Token
 from database import fake_users_db
 from pwdlib import PasswordHash
 
 import jwt
+import secrets
+import httpx
+
+
 
 
 SECRET_KEY = "fb8948f4e4b32168d8b19f16440a23b11a529e4b1e71902994e98eecf6343730"
@@ -25,6 +29,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token/",
 password_hash = PasswordHash.recommended()
 
 DUMMY_HASH = password_hash.hash("dummypassword")
+
+security = HTTPBasic()
+
 
 
 def verify_password(plain_password, hashed_password):
@@ -63,6 +70,44 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+
+@router.get("/ip/address")
+async def read_ip_address(request: Request):
+    # 1. Get the raw client IP
+    client_ip = request.client.host
+    
+    # 2. Check if behind a proxy (like Nginx or Cloudflare) 
+    # Use 'x-forwarded-for' to get the REAL user IP if applicable
+    real_ip = request.headers.get("x-forwarded-for")
+    if real_ip:
+        client_ip = real_ip.split(",")[0]
+
+    # Handle local testing (localhost IP won't have geo-data)
+    if client_ip in ("127.0.0.1", "::1"):
+        return {"error": "Localhost IP detected. Geolocation requires a public IP."}
+
+    # 3. Fetch geolocation data
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"http://ip-api.com{client_ip}")
+        geo_data = response.json()
+
+    return {
+        "ip": client_ip,
+        "port": request.client.port,
+        "location": {
+            "country": geo_data.get("country"),
+            "region": geo_data.get("regionName"),
+            "city": geo_data.get("city"),
+            "zip": geo_data.get("zip"),
+            "lat": geo_data.get("lat"),
+            "lon": geo_data.get("lon"),
+        },
+        "network": {
+            "isp": geo_data.get("isp"),
+            "org": geo_data.get("org"),
+            "as": geo_data.get("as"),
+        }
+    }
 
 @router.get("/items/")
 def read_root(token: Annotated[str, Depends(oauth2_scheme)]):
@@ -114,6 +159,12 @@ async def get_current_user( security_scopes: SecurityScopes, token: Annotated[st
 async def read_user_me(current_user: Annotated[User, Depends(get_current_user)]):
     frontend_user = User(username=current_user.username, email=current_user.email, full_name=current_user.full_name, disabled=current_user.disabled)
     return frontend_user
+
+
+
+@router.get("/users/me")
+async def read_current_user(credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+    return {"username": credentials.username, "password": credentials.password}
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
