@@ -1,8 +1,9 @@
 from typing import Annotated
 from datetime import datetime, timedelta, timezone
+from pydantic import BaseModel, ValidationError
+from fastapi import APIRouter, Depends, HTTPException, status, FastAPI , Security
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm, SecurityScopes
 
 from models import TokenData, User, UserInDB, Token
 from database import fake_users_db
@@ -17,7 +18,9 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 router = APIRouter()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token/",
+    scopes={"me": "Read information about the current user.", "items": "Read items."},
+)
 
 password_hash = PasswordHash.recommended()
 
@@ -72,28 +75,45 @@ def fake_decode_token(token):
         username=token + "fakedecoded", email="email@gexample.com", full_name="John Doe", disabled=False
     )
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+async def get_current_user( security_scopes: SecurityScopes, token: Annotated[str, Depends(oauth2_scheme)]):
+    if security_scopes.scopes:
+        authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
+    else:
+        authenticate_value = f"Bearer"
+
     credentials_exception = HTTPException(
         status_code = status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
+        headers={"WWW-Authenticate": authenticate_value},
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username = payload.get("sub")
         if username is None:
             raise credentials_exception
-        token_data = TokenData(username=username)
+        scope: str = payload.get("scope", "")
+        token_scopes = scope.split(" ")
+        token_data = TokenData( scopes = token_scopes, username=username)
     except jwt.InvalidTokenError:
         raise credentials_exception
     user = get_user(fake_users_db, username=token_data.username)
     if user is None:
         raise credentials_exception
+    for scope in security_scopes.scopes:
+        if scope not in token_data.scopes:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not enough permissions",
+                headers={"WWW-Authenticate": authenticate_value},
+            )
     return user
+
+
 
 @router.get("/users/me")
 async def read_user_me(current_user: Annotated[User, Depends(get_current_user)]):
-    return current_user
+    frontend_user = User(username=current_user.username, email=current_user.email, full_name=current_user.full_name, disabled=current_user.disabled)
+    return frontend_user
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -107,31 +127,24 @@ def get_password_hash(password):
 
 
 async def get_current_active_user(
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Security(get_current_user, scopes=["me"])],
 ):
     if current_user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
 
-@router.post("/token")
+@router.post("/token/")
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> Token:
-    print(form_data)
     user = authenticate_user(fake_users_db, form_data.username, form_data.password)
-    # print(user)
-    print("authentication done successfully")
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    print("calling create access token now")
     access_token = create_access_token(
-        data={"sub": user.username},
+        data={"sub": user.username, "scope": " ".join(form_data.scopes)},
         expires_delta=access_token_expires
     )
     return Token(access_token=access_token, token_type="bearer")
@@ -147,3 +160,10 @@ def authenticate_user(fake_db, username: str, password: str):
         return False
     print("verification sucessful")
     return user
+
+
+@router.get("/users/me/items/")
+async def read_own_items(
+    current_user: Annotated[User, Security(get_current_active_user, scopes=["items"])],
+):
+    return [{"item_id": "Foo", "owner": current_user.username}]

@@ -45,14 +45,14 @@ fake_users_db = {
         "full_name": "John Doe",
         "email": "johndoe@example.com",
         "hashed_password": "$argon2id$v=19$m=65536,t=3,p=4$V2l/SOPyl1ztNhwL4m/E0Q$3TI/nDMBOHDRsbwkK3pVQhfPkkyFosDIRse38HLpINc",
-        "disabled": False,
+        "disabled": True,
     },
     "alice": {
         "username": "alice",
         "full_name": "Alice Wonderson",
         "email": "alice@example.com",
         "hashed_password": "$argon2id$v=19$m=65536,t=3,p=4$8ms1QajIh3I2FPNXFYvOvQ$71fmg4O7WD8xc5Jg7Hhyjqux7ytwlI1TT13IoU50N6k",
-        "disabled": True,
+        "disabled": False,
     },
 }
 
